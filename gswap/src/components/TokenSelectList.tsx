@@ -6,7 +6,7 @@ interface Token {
   address: string;
   symbol: string;
   decimals: number;
-  // 他のトークン情報
+  name: string;
 }
 
 interface TokenSelectListProps {
@@ -21,6 +21,7 @@ const TokenSelectList: React.FC<TokenSelectListProps> = ({ selectedToken, onSele
 
   const filteredTokens = tokens.filter(token =>
     token.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    token.name.toLowerCase().includes(searchTerm.toLowerCase()) || // nameも検索対象に
     token.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -28,35 +29,35 @@ const TokenSelectList: React.FC<TokenSelectListProps> = ({ selectedToken, onSele
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-gray-700 text-white py-2 px-4 rounded w-full text-left flex justify-between items-center"
+        className="token-select-button" 
       >
         <span>{selectedToken ? selectedToken.symbol : 'Select Token'}</span>
         <span>▼</span>
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 bg-gray-700 border border-gray-600 rounded mt-1 w-full max-h-60 overflow-y-auto">
+        <div className="token-select-dropdown"> 
           <input
             type="text"
             placeholder="Search token..."
-            className="w-full p-2 bg-gray-800 border-b border-gray-600 text-white"
+            className="token-search-input" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           {filteredTokens.map((token) => (
             <div
               key={token.address}
-              className="p-2 hover:bg-gray-600 cursor-pointer text-white"
+              className="token-list-item" 
               onClick={() => {
                 onSelect(token);
                 setIsOpen(false);
                 setSearchTerm('');
               }}
             >
-              {token.symbol} ({token.address.substring(0, 6)}...)
+              {token.symbol} ({token.name})
             </div>
           ))}
-          {filteredTokens.length === 0 && <p className="p-2 text-gray-400">No tokens found.</p>}
+          {filteredTokens.length === 0 && <p className="p-2 text-gray-400">No tokens found.</p>} {/* <-- この部分はglobals.cssで定義されたクラス */}
         </div>
       )}
     </div>
