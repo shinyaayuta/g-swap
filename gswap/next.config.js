@@ -1,7 +1,6 @@
 // next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // Solana wallet-adapter-react-ui に必要な設定
     webpack: (config, { isServer }) => {
         if (!isServer) {
             config.resolve.fallback = {
