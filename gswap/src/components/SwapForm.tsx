@@ -17,6 +17,8 @@ interface Token {
   name: string; // TokenSelectListで使用するために追加
 }
 
+const WSOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112';
+
 const SwapForm: React.FC = () => {
   const { publicKey, connected, sendTransaction } = useWallet();
   const { tokens, isLoading: isTokenListLoading } = useTokenList();
@@ -29,13 +31,21 @@ const SwapForm: React.FC = () => {
   const [slippage, setSlippage] = useState<number>(0.5);
 
   useEffect(() => {
-    if (tokens.length > 0 && !fromToken) {
-      setFromToken(tokens.find(t => t.symbol === 'SOL') || tokens[0]);
+    // トークンリストがロードされ、かつ fromToken または toToken がまだ設定されていない場合
+    if (tokens.length > 0) {
+      if (!fromToken) {
+        // Fromトークンの初期設定: ネイティブSOLを優先、見つからなければリストの最初のトークン
+        const solToken = tokens.find(t => t.symbol === 'SOL' && t.isNative);
+        setFromToken(solToken || tokens[0]);
+      }
+      if (!toToken) {
+        // Toトークンの初期設定: USDCを優先、見つからなければリストの2番目のトークン (または最初のトークン以外)
+        const usdcToken = tokens.find(t => t.symbol === 'USDC');
+        // `fromToken` が設定されている場合、それと異なるトークンを選ぶようにする
+        setToToken(usdcToken || tokens.find(t => t.address !== fromToken?.address) || tokens[0]); // <-- ここをsetToTokenに修正し、より頑健に
+      }
     }
-    if (tokens.length > 0 && !toToken) {
-      setFromToken(tokens.find(t => t.symbol === 'USDC') || tokens[1]);
-    }
-  }, [tokens, fromToken, toToken]);
+  }, [tokens, fromToken, toToken]); // 依存配列: tokens, fromToken, toToken の変更で再実行
 
   useEffect(() => {
     const fetchQuote = async () => {
