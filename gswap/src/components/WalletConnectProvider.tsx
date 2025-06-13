@@ -17,14 +17,8 @@ interface WalletConnectProviderProps { // コンポーネント名を合わせ�
 }
 
 export function WalletConnectProvider({ children }: WalletConnectProviderProps) { // コンポーネント名を合わせる
-<<<<<<< HEAD
   const network = WalletAdapterNetwork.MainnetBata; // Devnet, Testnet, Mainnet-beta
   const endpoint = useMemo(() => clusterApiUrl(network), [network]); // clusterApiUrl を使用
-
-=======
-  const network = WalletAdapterNetwork.Devnet; // Devnet, Testnet, Mainnet-beta
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]); // clusterApiUrl を使用
->>>>>>> d4e90dda819087438912faf4736c9154665a8628
 
   const wallets = useMemo(
     () => [
@@ -46,3 +40,8 @@ export function WalletConnectProvider({ children }: WalletConnectProviderProps) 
     </ConnectionProvider>
   );
 }
+
+
+
+
+
