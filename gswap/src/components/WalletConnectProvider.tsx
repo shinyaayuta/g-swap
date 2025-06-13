@@ -7,7 +7,6 @@ import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js'; // clusterApiUrl を使用
-import { SOLANA_RPC_URL } from '../utils/constants';
 
 // ここでPhantomWalletAdapterとSolflareWalletAdapterをインポート
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'; 
@@ -19,7 +18,7 @@ interface WalletConnectProviderProps { // コンポーネント名を合わせ�
 
 export function WalletConnectProvider({ children }: WalletConnectProviderProps) { // コンポーネント名を合わせる
   const network = WalletAdapterNetwork.Devnet; // Devnet, Testnet, Mainnet-beta
-  const endpoint = useMemo(() => SOLANA_RPC_URL, []);// clusterApiUrl を使用
+  const endpoint = useMemo(() => clusterApiUrl(network), [network]); // clusterApiUrl を使用
 
   const wallets = useMemo(
     () => [
