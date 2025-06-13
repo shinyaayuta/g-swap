@@ -1,14 +1,14 @@
-// src/app/layout.tsx
+// gswap/src/app/layout.tsx
 
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { WalletConnectProvider } from '../components/WalletConnectProvider'; // <--- 追加
+import { WalletConnectProvider } from '../components/WalletConnectProvider'; // <-- 正しいパスとコンポーネント名
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Solana Swap App',
+  title: 'gswap',
   description: 'A decentralized token swap application on Solana',
 };
 
@@ -20,7 +20,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {/* WalletConnectProviderでアプリケーション全体をラップ */}
         <WalletConnectProvider> 
           {children}
         </WalletConnectProvider>
