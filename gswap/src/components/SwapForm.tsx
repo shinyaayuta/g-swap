@@ -2,65 +2,80 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { toast } from 'react-hot-toast';
 import useTokenList from '../hooks/useTokenList';
 import useJupiterSwap from '../hooks/useJupiterSwap';
 import TokenSelectList from './TokenSelectList';
+import { useSolanaConnection } from '../hooks/useSolanaConnection'; // NEW: RPC Connection Hook
+import { useTokenBalance } from '../hooks/useTokenBalance'; // NEW: Token Balance Hook
+import { useTransactionWatcher } from '../hooks/useTransactionWatcher'; // NEW: Transaction Watcher Hook
 
 interface Token {
   address: string;
   symbol: string;
   decimals: number;
-  name: string; // TokenSelectListで使用するために追加
+  name: string;
+  logoURI?: string;
+  isNative?: boolean;
 }
 
-const WSOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112';
+const WSOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112'; // この定数は現在のバージョンでは直接使用されていませんが、一般的に便利です。
 
 const SwapForm: React.FC = () => {
   const { publicKey, connected, sendTransaction } = useWallet();
+  const { connection } = useSolanaConnection(); // NEW: カスタムConnectionフック
   const { tokens, isLoading: isTokenListLoading } = useTokenList();
   const { getQuote, getSwapTransaction, isLoading: isSwapLoading } = useJupiterSwap();
+  const { watchTransaction } = useTransactionWatcher(); // NEW: トランザクション監視フック
 
   const [fromToken, setFromToken] = useState<Token | null>(null);
   const [toToken, setToToken] = useState<Token | null>(null);
   const [amount, setAmount] = useState<string>('');
   const [quoteResponse, setQuoteResponse] = useState<any>(null);
-  const [slippage, setSlippage] = useState<number>(0.5);
+  const [slippage, setSlippage] = useState<number>(0.5); // Slippage in percentage (例: 0.5は0.5%)
 
+  // ウォレット残高の取得
+  const { balance: fromTokenBalance, isLoading: isFromBalanceLoading } = useTokenBalance(fromToken?.address || null);
+  const { balance: toTokenBalance, isLoading: isToBalanceLoading } = useTokenBalance(toToken?.address || null);
+
+  // 初期のトークン設定
   useEffect(() => {
-    // トークンリストがロードされ、かつ fromToken または toToken がまだ設定されていない場合
     if (tokens.length > 0) {
       if (!fromToken) {
-        // Fromトークンの初期設定: ネイティブSOLを優先、見つからなければリストの最初のトークン
         const solToken = tokens.find(t => t.symbol === 'SOL' && t.isNative);
         setFromToken(solToken || tokens[0]);
       }
       if (!toToken) {
-        // Toトークンの初期設定: USDCを優先、見つからなければリストの2番目のトークン (または最初のトークン以外)
         const usdcToken = tokens.find(t => t.symbol === 'USDC');
-        // `fromToken` が設定されている場合、それと異なるトークンを選ぶようにする
-        setToToken(usdcToken || tokens.find(t => t.address !== fromToken?.address) || tokens[0]); // <-- ここをsetToTokenに修正し、より頑健に
+        setToToken(usdcToken || tokens.find(t => t.address !== fromToken?.address) || tokens[0]);
       }
     }
-  }, [tokens, fromToken, toToken]); // 依存配列: tokens, fromToken, toToken の変更で再実行
+  }, [tokens, fromToken, toToken]);
 
+  // 入力値の変更時に見積もりを取得
   useEffect(() => {
     const fetchQuote = async () => {
-      if (fromToken && toToken && amount && parseFloat(amount) > 0) {
+      if (fromToken && toToken && amount && parseFloat(amount) > 0 && connection) {
         try {
+          // Jupiter API は slippageBps を期待するため、パーセンテージをBPSに変換
+          const slippageBps = Math.floor(slippage * 100); 
           const quote = await getQuote(
             fromToken.address,
             toToken.address,
-            parseFloat(amount) * (10 ** fromToken.decimals)
+            parseFloat(amount) * (10 ** fromToken.decimals),
+            slippageBps
           );
           setQuoteResponse(quote);
         } catch (error) {
           console.error('Failed to fetch quote:', error);
           setQuoteResponse(null);
-          toast.error('見積もり取得に失敗しました。');
+          // 入力された数量が0でない場合にのみエラーのトーストを表示
+          if (parseFloat(amount) > 0) {
+            toast.error('見積もり取得に失敗しました。', { id: 'quote-error' });
+          }
         }
       } else {
         setQuoteResponse(null);
@@ -68,13 +83,13 @@ const SwapForm: React.FC = () => {
     };
     const handler = setTimeout(() => {
       fetchQuote();
-    }, 500);
+    }, 500); // 見積もり取得のデバウンス
     return () => clearTimeout(handler);
-  }, [fromToken, toToken, amount, getQuote]);
+  }, [fromToken, toToken, amount, slippage, getQuote, connection]);
 
   const handleSwap = async () => {
-    if (!connected || !publicKey) {
-      toast.error('ウォレットを接続してください。');
+    if (!connected || !publicKey || !connection) {
+      toast.error('ウォレットを接続し、ネットワークに接続されていることを確認してください。');
       return;
     }
     if (!fromToken || !toToken || !amount || parseFloat(amount) <= 0 || !quoteResponse) {
@@ -97,82 +112,123 @@ const SwapForm: React.FC = () => {
       }
 
       toast.loading('トランザクションを承認してください...', { id: 'approveTx' });
-      const signature = await sendTransaction(swapTransaction, new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL!));
+      const signature = await sendTransaction(swapTransaction, connection); // connection を渡す
 
       toast.dismiss('approveTx');
-      toast.success(
-        <span>
-          スワップ成功！ <br />
-          <a
-            href={`https://solana.fm/tx/${signature}?cluster=${process.env.NEXT_PUBLIC_SOLANA_CLUSTER}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 underline" // この部分はglobals.cssで定義されたクラス
-          >
-            SolanaFMで確認
-          </a>
-        </span>,
-        { duration: 8000 }
-      );
-      console.log('Transaction signature:', signature);
+      
+      // NEW: トランザクション監視を開始
+      watchTransaction(signature, connection); 
 
     } catch (error: any) {
       console.error('Swap failed:', error);
       toast.dismiss(loadingToastId);
-      toast.error(`スワップ失敗: ${error.message || '不明なエラー'}`);
+      toast.dismiss('approveTx'); // 承認要求のトーストも閉じる
+      // ウォレットアダプターからのユーザー拒否エラーを特別にチェック
+      if (error.message && error.message.includes('User rejected the request')) {
+        toast.error('トランザクションはユーザーによって拒否されました。');
+      } else {
+        toast.error(`スワップ失敗: ${error.message || '不明なエラー'}`);
+      }
     }
   };
 
-  const calculatePriceImpact = (data: any) => {
-    if (!data || !data.inAmount || !data.outAmount || !data.priceImpactPct) return 'N/A';
-    return (parseFloat(data.priceImpactPct) * 100).toFixed(2) + '%';
+  // Price Impactの計算とクラス名決定ロジック
+  const priceImpact = useMemo(() => {
+    if (!quoteResponse || !quoteResponse.priceImpactPct) return null;
+    const impact = parseFloat(quoteResponse.priceImpactPct) * 100; // パーセンテージに変換
+    let className = 'price-impact-low';
+    let warningMessage = '';
+
+    if (impact > 1 && impact <= 5) { // 例: 1%超5%以下で中程度の警告
+      className = 'price-impact-medium';
+      warningMessage = '価格影響が大きいです。ご注意ください。';
+    }
+    if (impact > 5) { // 例: 5%超で強い警告
+      className = 'price-impact-high';
+      warningMessage = '価格影響が非常に大きいです！取引を再考してください。';
+    }
+    return { value: impact.toFixed(2) + '%', className, warningMessage };
+  }, [quoteResponse]);
+
+  // 最大額を設定するヘルパー
+  const handleSetMaxAmount = () => {
+    if (fromTokenBalance !== null && fromToken) {
+      // SOLの場合、トランザクション手数料のために少し残す (例: 0.01 SOL)
+      // 他のトークンの場合はそのまま全額
+      const amountToSet = fromToken.symbol === 'SOL' ? Math.max(0, fromTokenBalance - 0.01) : fromTokenBalance;
+      setAmount(amountToSet.toString());
+    }
   };
 
-  return (
-    <div className="swap-form-container"> {/* <-- クラス名を変更 */}
-      {isTokenListLoading && <p>トークンリストを読み込み中...</p>}
-      {!isTokenListLoading && tokens.length === 0 && <p>トークンリストの取得に失敗しました。</p>}
 
-      <div className="form-group"> {/* <-- クラス名を変更 */}
-        <label className="form-label">From</label> {/* <-- クラス名を変更 */}
+  return (
+    <div className="swap-form-container">
+      {isTokenListLoading && <p className="text-gray-400">トークンリストを読み込み中...</p>}
+      {!isTokenListLoading && tokens.length === 0 && <p className="text-red-400">トークンリストの取得に失敗しました。</p>}
+
+      <div className="form-group">
+        <label className="form-label">From</label>
         <TokenSelectList 
           selectedToken={fromToken} 
           onSelect={(token) => {
             setFromToken(token);
-            if (token === toToken) setToToken(null);
+            if (token.address === toToken?.address) {
+              setToToken(null);
+            }
           }} 
-          tokens={tokens.filter(t => t !== toToken)}
+          tokens={tokens.filter(t => t.address !== toToken?.address)}
         />
-        <input
-          type="number"
-          placeholder="Amount"
-          className="input-field mt-2" 
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          min="0"
-          step="any"
-        />
-      </div>
-
-      <div className="form-group"> {/* <-- クラス名を変更 */}
-        <label className="form-label">To</label> {/* <-- クラス名を変更 */}
-        <TokenSelectList 
-          selectedToken={toToken} 
-          onSelect={(token) => {
-            setToToken(token);
-            if (token === fromToken) setFromToken(null);
-          }} 
-          tokens={tokens.filter(t => t !== fromToken)}
-        />
-        {quoteResponse && (
-          <p className="text-gray-400 text-sm mt-2"> {/* <-- この部分はglobals.cssで定義されたクラス */}
-            You will get: {(quoteResponse.outAmount / (10 ** toToken!.decimals)).toFixed(toToken!.decimals)} {toToken?.symbol}
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
+          <input
+            type="number"
+            placeholder="Amount"
+            className="input-field flex-grow" // 利用可能なスペースを占めるようにflex-grow
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            min="0"
+            step="any"
+          />
+          <button 
+            onClick={handleSetMaxAmount} 
+            className="ml-2 py-1 px-3 bg-gray-600 hover:bg-gray-500 rounded text-sm text-white"
+            disabled={!publicKey || fromTokenBalance === null || isFromBalanceLoading}
+          >
+            MAX
+          </button>
+        </div>
+        {publicKey && ( // ウォレット接続時に残高表示
+          <p className="text-gray-400 text-sm mt-2">
+            Balance: {isFromBalanceLoading ? 'Loading...' : `${fromTokenBalance !== null ? fromTokenBalance.toFixed(fromToken?.decimals || 2) : 'N/A'} ${fromToken?.symbol || ''}`}
           </p>
         )}
       </div>
 
-      <div className="form-group"> {/* <-- クラス名を変更 */}
-        <label className="form-label">Slippage (%)</label> {/* <-- クラス名を変更 */}
+      <div className="form-group">
+        <label className="form-label">To</label>
+        <TokenSelectList 
+          selectedToken={toToken} 
+          onSelect={(token) => {
+            setToToken(token);
+            if (token.address === fromToken?.address) {
+              setFromToken(null);
+            }
+          }} 
+          tokens={tokens.filter(t => t.address !== fromToken?.address)}
+        />
+        {quoteResponse && toToken && ( // toTokenの存在確認を追加
+          <p className="text-gray-400 text-sm mt-2">
+            You will get: {(quoteResponse.outAmount / (10 ** toToken.decimals)).toFixed(toToken.decimals)} {toToken.symbol}
+          </p>
+        )}
+        {publicKey && ( // ウォレット接続時に残高表示
+          <p className="text-gray-400 text-sm mt-2">
+            Balance: {isToBalanceLoading ? 'Loading...' : `${toTokenBalance !== null ? toTokenBalance.toFixed(toToken?.decimals || 2) : 'N/A'} ${toToken?.symbol || ''}`}
+          </p>
+        )}
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Slippage (%)</label>
         <input
           type="number"
           className="input-field" 
@@ -180,19 +236,36 @@ const SwapForm: React.FC = () => {
           onChange={(e) => setSlippage(parseFloat(e.target.value))}
           min="0"
           step="0.1"
+          max="50" // 最大スリッページを設ける
         />
       </div>
 
       {quoteResponse && (
-        <div className="mb-4 text-gray-400 text-sm"> {/* <-- この部分はglobals.cssで定義されたクラス */}
-          <p>Estimated Rate: 1 {fromToken?.symbol} ≈ {(quoteResponse.outAmount / (10 ** toToken!.decimals)) / (parseFloat(amount))} {toToken?.symbol}</p>
-          <p>Price Impact: {calculatePriceImpact(quoteResponse)}</p>
+        <div className="mb-4 text-gray-400 text-sm">
+          <p>Estimated Rate: 1 {fromToken?.symbol} ≈ {((quoteResponse.outAmount / (10 ** (toToken?.decimals || 0))) / parseFloat(amount)).toFixed(toToken?.decimals || 2)} {toToken?.symbol}</p> {/* decimalsのnullチェック追加 */}
+          {priceImpact && (
+            <>
+              <p className={priceImpact.className}>Price Impact: {priceImpact.value}</p>
+              {priceImpact.warningMessage && (
+                <p className="warning-message">{priceImpact.warningMessage}</p>
+              )}
+            </>
+          )}
         </div>
       )}
 
       <button
         onClick={handleSwap}
-        disabled={!connected || isSwapLoading || !fromToken || !toToken || !amount || parseFloat(amount) <= 0 || !quoteResponse}
+        disabled={
+          !connected || 
+          isSwapLoading || 
+          !fromToken || 
+          !toToken || 
+          !amount || 
+          parseFloat(amount) <= 0 || 
+          !quoteResponse ||
+          (priceImpact && parseFloat(priceImpact.value) >= 10) // 例: 価格影響が10%以上でスワップボタンを無効化
+        }
         className="swap-button" 
       >
         {isSwapLoading ? 'スワップ中...' : 'スワップ'}
