@@ -18,8 +18,9 @@ interface WalletConnectProviderProps { // コンポーネント名を合わせ�
 }
 
 export function WalletConnectProvider({ children }: WalletConnectProviderProps) { // コンポーネント名を合わせる
-  const network = WalletAdapterNetwork.Devnet; // Devnet, Testnet, Mainnet-beta
-  const endpoint = useMemo(() => SOLANA_RPC_URL, []);// clusterApiUrl を使用
+  const network = WalletAdapterNetwork.MainnetBata; // Devnet, Testnet, Mainnet-beta
+  const endpoint = useMemo(() => clusterApiUrl(network), [network]); // clusterApiUrl を使用
+
 
   const wallets = useMemo(
     () => [
