@@ -174,3 +174,26 @@ a {
 .mb-4 {
   margin-bottom: 1rem;
 }
+
+/* src/app/globals.css */
+
+/* ... 既存のCSS ... */
+
+.price-impact-low {
+  color: #a0aec0; /* gray-400 */
+}
+
+.price-impact-medium {
+  color: #f6ad55; /* orange-400 */
+}
+
+.price-impact-high {
+  color: #e53e3e; /* red-600 */
+  font-weight: bold;
+}
+
+.warning-message {
+  color: #e53e3e; /* red-600 */
+  font-size: 0.75rem; /* text-xs */
+  margin-top: 0.5rem;
+}
