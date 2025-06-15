@@ -12,6 +12,7 @@ import TokenSelectList from './TokenSelectList';
 import { useSolanaConnection } from '../hooks/useSolanaConnection'; // NEW: RPC Connection Hook
 import { useTokenBalance } from '../hooks/useTokenBalance'; // NEW: Token Balance Hook
 import { useTransactionWatcher } from '../hooks/useTransactionWatcher'; // NEW: Transaction Watcher Hook
+import RpcSelector from './RpcSelector';
 
 interface Token {
   address: string;
@@ -163,6 +164,7 @@ const SwapForm: React.FC = () => {
 
   return (
     <div className="swap-form-container">
+      <RpcSelector /> {/* NEW: RPC Selectorコンポーネントを追加 */}
       {isTokenListLoading && <p className="text-gray-400">トークンリストを読み込み中...</p>}
       {!isTokenListLoading && tokens.length === 0 && <p className="text-red-400">トークンリストの取得に失敗しました。</p>}
 

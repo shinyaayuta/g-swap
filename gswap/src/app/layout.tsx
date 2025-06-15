@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { WalletConnectProvider } from '../components/WalletConnectProvider'; // <-- 正しいパスとコンポーネント名
+import { SolanaConnectionProvider } from '@/hooks/useSolanaConnection';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,9 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+      <SolanaConnectionProvider>
         <WalletConnectProvider> 
           {children}
         </WalletConnectProvider>
+      </SolanaConnectionProvider>
       </body>
     </html>
   );
