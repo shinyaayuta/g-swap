@@ -1,14 +1,19 @@
 /* src/app/globals.css */
 
-/* Next.jsデフォルトのCSSをリセット */
+/* Basic Reset & Font */
 html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
-  background-color: #1a202c; /* ダーク系の背景色 */
-  color: #e2e8f0; /* 明るいテキスト色 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  background-color: #1A0A0A; /* ★変更: 全体の背景色を非常に暗い赤系に */
+  color: #FAFAFA; /* ★変更: 明るいテキスト色 */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 a {
@@ -20,163 +25,275 @@ a {
   box-sizing: border-box;
 }
 
-/* Wallet Adapter UIのCSS */
+/* Wallet Adapter UI overrides */
 @import '@solana/wallet-adapter-react-ui/styles.css';
 
-/* カスタムCSSの追加 */
+/* Custom Wallet Button Styling (to match Uniswap's "Connect Wallet") */
+.wallet-adapter-button {
+  background-color: #553333 !important; /* ★変更: ウォレットボタンの背景色を赤茶系に */
+  color: #FAFAFA !important; /* ★変更: 明るいテキスト色 */
+  border-radius: 12px !important;
+  padding: 10px 20px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  transition: background-color 0.2s ease-in-out !important;
+}
+
+.wallet-adapter-button:hover {
+  background-color: #775555 !important; /* ★変更: ホバー時のウォレットボタンの色を明るい赤茶系に */
+}
+
+/* Main Container */
 .main-container {
   display: flex;
-  min-height: 100vh;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 3rem; /* 24px = 1.5rem * 16px = 24px, ここではもっと大きく 3rem */
+  justify-content: flex-start;
+  min-height: 100vh;
+  width: 100%;
+  padding: 20px;
 }
 
 .app-title {
-  font-size: 2.5rem; /* 4xl */
+  font-size: 2.5rem;
   font-weight: bold;
-  margin-bottom: 2rem; /* mb-8 */
+  margin-bottom: 30px;
+  color: #FAFAFA; /* ★変更: 明るいテキスト色 */
 }
 
-.wallet-button-container {
-  margin-bottom: 1rem; /* mb-4 */
-}
-
-.balance-container {
-  margin-bottom: 1rem; /* mb-4 */
-  font-size: 1.125rem; /* text-lg */
-  color: #a0aec0; /* gray-400 */
-}
-
-.swap-form-container {
-  background-color: #2d3748; /* gray-800 */
-  padding: 1.5rem; /* p-6 */
-  border-radius: 0.5rem; /* rounded-lg */
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+/* Swap Card - Mimics Uniswap's central swap box */
+.swap-card {
+  background-color: #281414; /* ★変更: カードの背景色を暗い赤系に */
+  border-radius: 16px;
+  padding: 20px;
   width: 100%;
-  max-width: 28rem; /* max-w-md */
+  max-width: 480px;
+  box-shadow: 0px 0px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid #452A2A; /* ★変更: ボーダー色を赤系に */
 }
 
-.form-group {
-  margin-bottom: 1rem; /* mb-4 */
+/* Input Group - From/To sections */
+.input-group {
+  background-color: #361F1F; /* ★変更: 入力フィールドの背景色を赤系に */
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #452A2A; /* ★変更: ボーダー色を赤系に */
 }
 
-.form-label {
-  display: block;
-  color: #a0aec0; /* gray-400 */
-  font-size: 0.875rem; /* text-sm */
-  font-weight: bold;
-  margin-bottom: 0.5rem; /* mb-2 */
-}
-
-.input-field {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  appearance: none;
-  border: 1px solid #4a5568; /* border */
-  border-radius: 0.25rem; /* rounded */
-  width: 100%;
-  padding: 0.5rem 0.75rem; /* py-2 px-3 */
-  color: #e2e8f0; /* text-gray-700 */
-  line-height: 1.25; /* leading-tight */
-  background-color: #4a5568; /* bg-gray-700 */
-}
-
-.input-field:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5); /* focus:shadow-outline */
-}
-
-.token-select-button {
-  background-color: #4a5568; /* bg-gray-700 */
-  color: #e2e8f0; /* text-white */
-  padding: 0.5rem 1rem; /* py-2 px-4 */
-  border-radius: 0.25rem; /* rounded */
-  width: 100%;
-  text-align: left;
+.input-label-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: none; /* remove default button border */
-  cursor: pointer;
+  margin-bottom: 8px;
+  color: #C0A0A0; /* ★変更: ラベル色を明るい赤系に */
+  font-size: 14px;
 }
 
-.token-select-dropdown {
-  position: absolute;
+.input-label {
+  font-weight: 500;
+}
+
+.balance-text {
+  font-size: 12px;
+  color: #907070; /* ★変更: 残高テキスト色をくすんだ赤系に */
+}
+
+.input-field-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.token-amount-input {
+  flex-grow: 1;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #FAFAFA; /* ★変更: 明るいテキスト色 */
+  padding: 0;
+  outline: none;
+}
+
+.token-amount-input::placeholder {
+  color: #907070; /* ★変更: プレースホルダー色をくすんだ赤系に */
+}
+
+/* Token Select Button */
+.token-select-button {
+  background-color: #4A2A2A; /* ★変更: トークン選択ボタンの背景色を赤系に */
+  color: #FAFAFA; /* ★変更: 明るいテキスト色 */
+  padding: 6px 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.token-select-button:hover {
+  background-color: #6A4A4A; /* ★変更: ホバー時のトークン選択ボタン色を赤系に */
+}
+
+.token-select-button img {
+  width: 24px;
+  height: 24px;
+  margin-right: 6px;
+  border-radius: 50%;
+}
+
+/* Swap Icon Button */
+.swap-icon-container {
+  display: flex;
+  justify-content: center;
+  margin: -20px 0 0px;
   z-index: 10;
-  background-color: #4a5568; /* bg-gray-700 */
-  border: 1px solid #2d3748; /* border border-gray-600 */
-  border-radius: 0.25rem; /* rounded */
-  margin-top: 0.25rem; /* mt-1 */
-  width: 100%;
-  max-height: 15rem; /* max-h-60 */
-  overflow-y: auto;
 }
 
-.token-search-input {
-  width: 100%;
-  padding: 0.5rem; /* p-2 */
-  background-color: #2d3748; /* bg-gray-800 */
-  border-bottom: 1px solid #4a5568; /* border-b border-gray-600 */
-  color: #e2e8f0; /* text-white */
-}
-
-.token-list-item {
-  padding: 0.5rem; /* p-2 */
-  color: #e2e8f0; /* text-white */
+.swap-icon-button {
+  background-color: #281414; /* ★変更: カード背景色と合わせる */
+  border: 4px solid #1A0A0A; /* ★変更: メイン背景色と合わせる */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
 }
 
-.token-list-item:hover {
-  background-color: #4a5568; /* hover:bg-gray-600 */
+.swap-icon-button:hover {
+  background-color: #361F1F; /* ★変更: ホバー時の色を赤系に */
+  border-color: #281414; /* ★変更: ホバー時のボーダー色を赤系に */
 }
 
+.swap-arrows {
+  color: #C0A0A0; /* ★変更: 矢印色を明るい赤系に */
+  width: 20px;
+  height: 20px;
+}
+
+/* Details Section (Slippage, Price Impact, Estimated Rate) */
+.details-section {
+  background-color: #361F1F; /* ★変更: 詳細セクションの背景色を赤系に */
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+  border: 1px solid #452A2A; /* ★変更: ボーダー色を赤系に */
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #C0A0A0; /* ★変更: テキスト色を明るい赤系に */
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.slippage-input {
+  background-color: #4A2A2A; /* ★変更: スリッページ入力の背景色を赤系に */
+  border: 1px solid #6A4A4A; /* ★変更: ボーダー色を赤系に */
+  border-radius: 8px;
+  color: #FAFAFA; /* ★変更: 明るいテキスト色 */
+  padding: 4px 8px;
+  width: 60px;
+  text-align: center;
+  outline: none;
+  font-size: 14px;
+}
+
+/* Swap Button */
 .swap-button {
-  background-color: #3182ce; /* bg-blue-600 */
-  color: #ffffff; /* text-white */
+  background-color: #E53935; /* ★変更: スワップボタンの背景色を鮮やかな赤に */
+  color: #FAFAFA; /* ★変更: 明るいテキスト色 */
   font-weight: bold;
-  padding: 0.5rem 1rem; /* py-2 px-4 */
-  border-radius: 0.25rem; /* rounded */
+  padding: 16px 20px;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   width: 100%;
-  transition: background-color 0.2s;
+  font-size: 18px;
+  transition: background-color 0.2s ease-in-out;
+  margin-top: 20px;
 }
 
-.swap-button:hover {
-  background-color: #2b6cb0; /* hover:bg-blue-700 */
-}
-
-.swap-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.5); /* focus:shadow-outline */
+.swap-button:hover:not(:disabled) {
+  background-color: #C62828; /* ★変更: ホバー時のスワップボタンの色を暗い赤に */
 }
 
 .swap-button:disabled {
-  opacity: 0.5;
+  background-color: #6A4A4A; /* ★変更: 無効時の背景色を赤系に */
+  color: #907070; /* ★変更: 無効時のテキスト色をくすんだ赤系に */
   cursor: not-allowed;
 }
 
-.text-sm {
-  font-size: 0.875rem;
+/* TokenSelectList specific styling */
+.token-select-dropdown {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  background-color: #361F1F; /* ★変更: ドロップダウンの背景色を赤系に */
+  border: 1px solid #452A2A; /* ★変更: ボーダー色を赤系に */
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  min-width: 300px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.text-gray-400 {
-  color: #a0aec0;
+.token-search-input {
+  width: calc(100% - 20px);
+  padding: 10px;
+  margin: 10px;
+  background-color: #4A2A2A; /* ★変更: 検索入力の背景色を赤系に */
+  border: 1px solid #6A4A4A; /* ★変更: ボーダー色を赤系に */
+  border-radius: 8px;
+  color: #FAFAFA; /* ★変更: 明るいテキスト色 */
+  outline: none;
 }
 
-.text-blue-400 {
-  color: #63b3ed;
+.token-list-item {
+  padding: 10px 16px;
+  color: #FAFAFA; /* ★変更: 明るいテキスト色 */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.1s ease-in-out;
 }
 
-.underline {
+.token-list-item:hover {
+  background-color: #4A2A2A; /* ★変更: ホバー時のリストアイテム色を赤系に */
+}
+
+.token-list-item img {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  border-radius: 50%;
+}
+
+.p-2.text-gray-400 { /* For "No tokens found" */
+  padding: 10px 16px;
+  color: #907070; /* ★変更: テキスト色をくすんだ赤系に */
+  text-align: center;
+}
+
+.text-blue-400.underline {
+  color: #FF8888; /* ★変更: リンク色を明るい赤に */
   text-decoration: underline;
-}
-
-.mt-2 {
-  margin-top: 0.5rem;
-}
-
-.mb-4 {
-  margin-bottom: 1rem;
 }

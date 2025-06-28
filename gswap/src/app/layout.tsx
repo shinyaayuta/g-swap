@@ -8,7 +8,7 @@ import { WalletConnectProvider } from '../components/WalletConnectProvider'; // 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'gswap',
+  title: 'SWAP55',
   description: 'A decentralized token swap application on Solana',
 };
 

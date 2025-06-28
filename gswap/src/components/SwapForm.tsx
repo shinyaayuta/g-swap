@@ -2,24 +2,22 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { toast } from 'react-hot-toast';
 import useTokenList from '../hooks/useTokenList';
 import useJupiterSwap from '../hooks/useJupiterSwap';
 import TokenSelectList from './TokenSelectList';
-
-import {useWalletBalance} from '../hooks/useWalletBalance';
+import { useWalletBalance } from '../hooks/useWalletBalance';
 
 interface Token {
   address: string;
   symbol: string;
   decimals: number;
-  name: string; // TokenSelectListで使用するために追加
+  name: string;
+  logoURI?: string;
 }
-
-const WSOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112';
 
 const SwapForm: React.FC = () => {
   const { publicKey, connected, sendTransaction } = useWallet();
@@ -36,21 +34,17 @@ const SwapForm: React.FC = () => {
   const { balance: toTokenBalance } = useWalletBalance(toToken?.address);
 
   useEffect(() => {
-    // トークンリストがロードされ、かつ fromToken または toToken がまだ設定されていない場合
     if (tokens.length > 0) {
       if (!fromToken) {
-        // Fromトークンの初期設定: ネイティブSOLを優先、見つからなければリストの最初のトークン
-        const solToken = tokens.find(t => t.symbol === 'SOL' && t.isNative);
+        const solToken = tokens.find(t => t.symbol === 'SOL'); // Assuming 'SOL' is native
         setFromToken(solToken || tokens[0]);
       }
       if (!toToken) {
-        // Toトークンの初期設定: USDCを優先、見つからなければリストの2番目のトークン (または最初のトークン以外)
         const usdcToken = tokens.find(t => t.symbol === 'USDC');
-        // `fromToken` が設定されている場合、それと異なるトークンを選ぶようにする
-        setToToken(usdcToken || tokens.find(t => t.address !== fromToken?.address) || tokens[0]); // <-- ここをsetToTokenに修正し、より頑健に
+        setToToken(usdcToken || tokens.find(t => t.address !== fromToken?.address) || tokens[1] || tokens[0]);
       }
     }
-  }, [tokens, fromToken, toToken]); // 依存配列: tokens, fromToken, toToken の変更で再実行
+  }, [tokens, fromToken, toToken]);
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -59,13 +53,14 @@ const SwapForm: React.FC = () => {
           const quote = await getQuote(
             fromToken.address,
             toToken.address,
-            parseFloat(amount) * (10 ** fromToken.decimals)
+            parseFloat(amount) * (10 ** fromToken.decimals),
+            slippage * 100 // Convert percentage to basis points
           );
           setQuoteResponse(quote);
         } catch (error) {
           console.error('Failed to fetch quote:', error);
           setQuoteResponse(null);
-          toast.error('見積もり取得に失敗しました。');
+          toast.error('Failed to fetch quote.');
         }
       } else {
         setQuoteResponse(null);
@@ -75,46 +70,46 @@ const SwapForm: React.FC = () => {
       fetchQuote();
     }, 500);
     return () => clearTimeout(handler);
-  }, [fromToken, toToken, amount, getQuote]);
+  }, [fromToken, toToken, amount, slippage, getQuote]);
 
   const handleSwap = async () => {
     if (!connected || !publicKey) {
-      toast.error('ウォレットを接続してください。');
+      toast.error('Please connect your wallet.');
       return;
     }
     if (!fromToken || !toToken || !amount || parseFloat(amount) <= 0 || !quoteResponse) {
-      toast.error('スワップ情報を入力してください。');
+      toast.error('Please enter swap details.');
       return;
     }
 
     let loadingToastId: string | undefined;
 
     try {
-      loadingToastId = toast.loading('トランザクションを生成中...');
+      loadingToastId = toast.loading('Generating transaction...');
       
       const swapTransaction = await getSwapTransaction(quoteResponse);
       
       toast.dismiss(loadingToastId);
 
       if (!swapTransaction) {
-        toast.error('スワップトランザクションの取得に失敗しました。');
+        toast.error('Failed to get swap transaction.');
         return;
       }
 
-      toast.loading('トランザクションを承認してください...', { id: 'approveTx' });
+      toast.loading('Please approve the transaction...', { id: 'approveTx' });
       const signature = await sendTransaction(swapTransaction, new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL!));
 
       toast.dismiss('approveTx');
       toast.success(
         <span>
-          スワップ成功！ <br />
+          Swap successful! <br />
           <a
             href={`https://solana.fm/tx/${signature}?cluster=${process.env.NEXT_PUBLIC_SOLANA_CLUSTER}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-400 underline" // この部分はglobals.cssで定義されたクラス
+            className="text-blue-400 underline"
           >
-            SolanaFMで確認
+            View on SolanaFM
           </a>
         </span>,
         { duration: 8000 }
@@ -124,85 +119,126 @@ const SwapForm: React.FC = () => {
     } catch (error: any) {
       console.error('Swap failed:', error);
       toast.dismiss(loadingToastId);
-      toast.error(`スワップ失敗: ${error.message || '不明なエラー'}`);
+      toast.error(`Swap failed: ${error.message || 'Unknown error'}`);
     }
   };
 
-  const calculatePriceImpact = (data: any) => {
+  const calculatePriceImpact = useCallback((data: any) => {
     if (!data || !data.inAmount || !data.outAmount || !data.priceImpactPct) return 'N/A';
     return (parseFloat(data.priceImpactPct) * 100).toFixed(2) + '%';
+  }, []);
+
+  const reverseSwap = () => {
+    setFromToken(toToken);
+    setToToken(fromToken);
+    setAmount('');
+    setQuoteResponse(null);
   };
 
   return (
-    <div className="swap-form-container"> {/* <-- クラス名を変更 */}
-      {isTokenListLoading && <p>トークンリストを読み込み中...</p>}
-      {!isTokenListLoading && tokens.length === 0 && <p>トークンリストの取得に失敗しました。</p>}
+    <div className="swap-card">
+      {isTokenListLoading && <p className="text-center text-gray-400">Loading token list...</p>}
+      {!isTokenListLoading && tokens.length === 0 && <p className="text-center text-red-400">Failed to load token list.</p>}
 
-      <div className="form-group"> {/* <-- クラス名を変更 */}
-        <label className="form-label">From</label> {/* <-- クラス名を変更 */}
-        <TokenSelectList 
-          selectedToken={fromToken} 
-          onSelect={(token) => {
-            setFromToken(token);
-            if (token === toToken) setToToken(null);
-          }} 
-          tokens={tokens.filter(t => t !== toToken)}
-        />
-        <input
-          type="number"
-          placeholder="Amount"
-          className="input-field mt-2" 
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          min="0"
-          step="any"
-        />
-        {fromTokenBalance !== null && <p className="text-gray-400 text-sm mt-1">Balance: {fromTokenBalance.toFixed(4)}</p>}
-      </div>
-
-      <div className="form-group"> {/* <-- クラス名を変更 */}
-        <label className="form-label">To</label> {/* <-- クラス名を変更 */}
-        <TokenSelectList 
-          selectedToken={toToken} 
-          onSelect={(token) => {
-            setToToken(token);
-            if (token === fromToken) setFromToken(null);
-          }} 
-          tokens={tokens.filter(t => t !== fromToken)}
-        />
-        {quoteResponse && (
-          <p className="text-gray-400 text-sm mt-2"> {/* <-- この部分はglobals.cssで定義されたクラス */}
-            You will get: {(quoteResponse.outAmount / (10 ** toToken!.decimals)).toFixed(toToken!.decimals)} {toToken?.symbol}
-          </p>
-        )}
-        {toTokenBalance !== null && <p className="text-gray-400 text-sm mt-1">Balance: {toTokenBalance.toFixed(4)}</p>}
-      </div>
-
-      <div className="form-group"> {/* <-- クラス名を変更 */}
-        <label className="form-label">Slippage (%)</label> {/* <-- クラス名を変更 */}
-        <input
-          type="number"
-          className="input-field" 
-          value={slippage}
-          onChange={(e) => setSlippage(parseFloat(e.target.value))}
-          min="0"
-          step="0.1"
-        />
-      </div>
-
-      {quoteResponse && (
-        <div className="mb-4 text-gray-400 text-sm"> {/* <-- この部分はglobals.cssで定義されたクラス */}
-          <p>Estimated Rate: 1 {fromToken?.symbol} ≈ {(quoteResponse.outAmount / (10 ** toToken!.decimals)) / (parseFloat(amount))} {toToken?.symbol}</p>
-          <p>Price Impact: {calculatePriceImpact(quoteResponse)}</p>
+      <div className="input-group">
+        <div className="input-label-row">
+          <label className="input-label">You pay</label>
+          {fromTokenBalance !== null && <span className="balance-text">Balance: {fromTokenBalance.toFixed(4)} {fromToken?.symbol}</span>}
         </div>
-      )}
+        <div className="input-field-row">
+          <input
+            type="number"
+            placeholder="0.0"
+            className="token-amount-input"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            min="0"
+            step="any"
+          />
+          <TokenSelectList
+            selectedToken={fromToken}
+            onSelect={(token) => {
+              setFromToken(token);
+              if (token.address === toToken?.address) {
+                setToToken(null);
+              }
+            }}
+            tokens={tokens.filter(t => t.address !== toToken?.address)}
+          />
+        </div>
+      </div>
+
+      <div className="swap-icon-container">
+        <button onClick={reverseSwap} className="swap-icon-button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="swap-arrows">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M21 5H3"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M3 19h18"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div className="input-group">
+        <div className="input-label-row">
+          <label className="input-label">You receive</label>
+          {toTokenBalance !== null && <span className="balance-text">Balance: {toTokenBalance.toFixed(4)} {toToken?.symbol}</span>}
+        </div>
+        <div className="input-field-row">
+          <input
+            type="text" // Use text for display, as it's an output
+            placeholder="0.0"
+            className="token-amount-input"
+            value={quoteResponse ? (quoteResponse.outAmount / (10 ** toToken!.decimals)).toFixed(toToken!.decimals) : ''}
+            readOnly
+          />
+          <TokenSelectList
+            selectedToken={toToken}
+            onSelect={(token) => {
+              setToToken(token);
+              if (token.address === fromToken?.address) {
+                setFromToken(null);
+              }
+            }}
+            tokens={tokens.filter(t => t.address !== fromToken?.address)}
+          />
+        </div>
+      </div>
+
+      <div className="details-section">
+        <div className="detail-row">
+          <span>Slippage tolerance</span>
+          <input
+            type="number"
+            className="slippage-input"
+            value={slippage}
+            onChange={(e) => setSlippage(parseFloat(e.target.value))}
+            min="0.1"
+            max="50"
+            step="0.1"
+          />
+          <span>%</span>
+        </div>
+        {quoteResponse && (
+          <>
+            <div className="detail-row">
+              <span>Price Impact</span>
+              <span>{calculatePriceImpact(quoteResponse)}</span>
+            </div>
+            <div className="detail-row">
+              <span>Estimated Rate</span>
+              <span>1 {fromToken?.symbol} ≈ {(quoteResponse.outAmount / (10 ** toToken!.decimals)) / parseFloat(amount)} {toToken?.symbol}</span>
+            </div>
+          </>
+        )}
+      </div>
 
       <button
         onClick={handleSwap}
         disabled={!connected || isSwapLoading || !fromToken || !toToken || !amount || parseFloat(amount) <= 0 || !quoteResponse}
-        className="swap-button" 
+        className="swap-button"
       >
-        {isSwapLoading ? 'スワップ中...' : 'スワップ'}
+        {isSwapLoading ? 'Swapping...' : connected ? 'Swap' : 'Connect Wallet'}
       </button>
     </div>
   );
