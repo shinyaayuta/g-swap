@@ -17,12 +17,12 @@ interface WalletConnectProviderProps { // コンポーネント名を合わせ�
 }
 
 export function WalletConnectProvider({ children }: WalletConnectProviderProps) { // コンポーネント名を合わせる
-  const network = WalletAdapterNetwork.MainnetBata; // Devnet, Testnet, Mainnet-beta
+  const network = WalletAdapterNetwork.Mainnet; // Devnet, Testnet, Mainnet-beta
   const endpoint = useMemo(() => clusterApiUrl(network), [network]); // clusterApiUrl を使用
 
   const wallets = useMemo(
     () => [
-      new PhantomWalletAdapter(), // Phantom ウォレットを追加
+      new PhantomWalletAdapter(), // Phantom ウォレッを追加
       new SolflareWalletAdapter({ network }), // Solflare ウォレットを追加
       // 必要に応じて他のウォレットアダプターを追加
     ],

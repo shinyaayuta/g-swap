@@ -40,7 +40,7 @@ const useJupiterSwap = () => {
       }
 
       return data; // <-- data.data[0] ではなく、data そのものを返す
-    } catch (error) {
+    } catch (error: unknown) { // ★修正: errorをunknownとして明示的に型付け
       console.error('Failed to get Jupiter quote:', error);
       throw error; // エラーを再スローして、呼び出し元で捕捉させる
     } finally {
@@ -81,9 +81,10 @@ const useJupiterSwap = () => {
 
       return transaction;
 
-    } catch (error) {
+    } catch (error: unknown) { // ★修正: errorをunknownとして明示的に型付け
       console.error('Failed to get Jupiter swap transaction:', error);
-      toast.error(`トランザクション生成エラー: ${error.message}`);
+      // ★修正: errorがErrorインスタンスであることをチェック
+      toast.error(`トランザクション生成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
       throw error;
     } finally {
       setIsLoading(false);
