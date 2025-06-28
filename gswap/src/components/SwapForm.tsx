@@ -10,6 +10,8 @@ import useTokenList from '../hooks/useTokenList';
 import useJupiterSwap from '../hooks/useJupiterSwap';
 import TokenSelectList from './TokenSelectList';
 
+import {useWalletBalance} from '../hooks/useWalletBalance';
+
 interface Token {
   address: string;
   symbol: string;
@@ -29,6 +31,9 @@ const SwapForm: React.FC = () => {
   const [amount, setAmount] = useState<string>('');
   const [quoteResponse, setQuoteResponse] = useState<any>(null);
   const [slippage, setSlippage] = useState<number>(0.5);
+
+  const { balance: fromTokenBalance } = useWalletBalance(fromToken?.address);
+  const { balance: toTokenBalance } = useWalletBalance(toToken?.address);
 
   useEffect(() => {
     // トークンリストがロードされ、かつ fromToken または toToken がまだ設定されていない場合
@@ -152,6 +157,7 @@ const SwapForm: React.FC = () => {
           min="0"
           step="any"
         />
+        {fromTokenBalance !== null && <p className="text-gray-400 text-sm mt-1">Balance: {fromTokenBalance.toFixed(4)}</p>}
       </div>
 
       <div className="form-group"> {/* <-- クラス名を変更 */}
@@ -169,6 +175,7 @@ const SwapForm: React.FC = () => {
             You will get: {(quoteResponse.outAmount / (10 ** toToken!.decimals)).toFixed(toToken!.decimals)} {toToken?.symbol}
           </p>
         )}
+        {toTokenBalance !== null && <p className="text-gray-400 text-sm mt-1">Balance: {toTokenBalance.toFixed(4)}</p>}
       </div>
 
       <div className="form-group"> {/* <-- クラス名を変更 */}
