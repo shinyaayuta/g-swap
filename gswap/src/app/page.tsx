@@ -1,34 +1,42 @@
 // src/app/page.tsx
 
-'use client'; // <-- このディレクティブを必ずファイルの先頭に記述してください
+'use client';
 
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import SwapForm from '../components/SwapForm';
 import { Toaster } from 'react-hot-toast';
-// @solana/wallet-adapter-react-ui/styles.css は globals.css でインポート済みのため、ここでは不要
-// import '@solana/wallet-adapter-react-ui/styles.css'; 
-import React, { useState, useEffect } from 'react'; // useState と useEffect をインポート
+import React, { useState, useEffect } from 'react';
+import { useWalletBalance } from '../hooks/useWalletBalance'; // useWalletBalanceをインポート
+import { useWallet } from '@solana/wallet-adapter-react'; // useWalletをインポート
 
 export default function HomePage() {
-  // `isClient` ステートを定義し、コンポーネントがクライアントサイドでマウントされたか追跡
   const [isClient, setIsClient] = useState(false);
+  const { publicKey } = useWallet(); // ウォレットの公開鍵を取得
+  const { balance, loading } = useWalletBalance(); // 残高とローディング状態を取得
 
   useEffect(() => {
-    // コンポーネントがブラウザでマウントされた後、この useEffect が実行される
-    // これにより、`isClient` が `true` になり、クライアントサイドでのみレンダリングされる要素が表示される
     setIsClient(true);
-  }, []); // 依存配列が空なので、コンポーネントがマウントされた時に一度だけ実行される
+  }, []);
 
   return (
     <main className="main-container">
       <h1 className="app-title">gswap</h1>
       <div className="wallet-button-container">
-        {/* WalletMultiButton はクライアントサイドでしか動作しない動的UIなので、
-            `isClient` が true の場合にのみレンダリングする (ハイドレーションエラー対策) */}
-        {isClient && <WalletMultiButton />} 
+        {isClient && <WalletMultiButton />}
       </div>
+      
+      {/* 残高表示エリア */}
+      {isClient && publicKey && (
+        <div className="balance-container">
+          {loading ? (
+            <p>Loading balance...</p>
+          ) : (
+            <p>Balance: {balance !== null ? `${balance.toFixed(4)} SOL` : 'N/A'}</p>
+          )}
+        </div>
+      )}
+
       <SwapForm />
-      {/* react-hot-toast の通知表示エリア */}
       <Toaster position="bottom-right" />
     </main>
   );

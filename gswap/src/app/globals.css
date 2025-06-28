@@ -43,6 +43,12 @@ a {
   margin-bottom: 1rem; /* mb-4 */
 }
 
+.balance-container {
+  margin-bottom: 1rem; /* mb-4 */
+  font-size: 1.125rem; /* text-lg */
+  color: #a0aec0; /* gray-400 */
+}
+
 .swap-form-container {
   background-color: #2d3748; /* gray-800 */
   padding: 1.5rem; /* p-6 */
